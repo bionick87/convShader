@@ -10,4 +10,7 @@ As can be seen from the graph we get a steady increase in performance (Gflops/s)
 ![alt tag](https://raw2.github.com/bionick87/convShader/master/Test.jpg)
 
 
+[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/aOxUoamo5Mc/0.jpg)](http://www.youtube.com/watch?v=aOxUoamo5Mc)  
+
+
 
