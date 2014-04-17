@@ -2,7 +2,7 @@ package net.obviam.opengl;
 
 
 /*
- * Copyright Nicolò Savioli (C) 2013 The Android Open Source Project
+ * Copyright (C) 2013 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,32 +73,40 @@ class  GlRenderer extends Activity implements GLSurfaceView.Renderer {
         // class's static methods instead.
     	GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
-      
-         if(mRight==true) 	
-         {
+        
+        if(mRight==true) 	
+        {
            cont++;
            mRight=false;
-         }
+        }
         
-         if(mLeft==true) 	
-         {
-            cont--;
-            mLeft=false;
-         }
+        if(mLeft==true) 	
+        {
+           cont--;
+           mLeft=false;
+        }
            
-         if(cont<0||cont>4) 	
-         {
+        if(cont<0||cont>4) 	
+        {
            cont=0;
-         }
+        }
         
-         if(cont==0) 	
-         {
-          GLES20.glUseProgram(mProgram_image);  
-         }
+        if(cont==0) 	
+        {
+         //startTime0x0=SystemClock.uptimeMillis() % 1000;
+          GLES20.glUseProgram(mProgram_image);
+         //endTime0x0=SystemClock.uptimeMillis() % 1000;
+         //deltaTime0x0 = endTime3x3 - startTime3x3;  
+         //Log.e("TIME", "TIME 0x0 KERNEL:" +  Long.toString(deltaTime0x0));  
+        }
         
-         if(cont==1) 	
-         {
+        if(cont==1) 	
+        {
+          //startTime3x3=SystemClock.uptimeMillis() % 1000;
           GLES20.glUseProgram(mProgram_3x3);
+          //endTime3x3=SystemClock.uptimeMillis() % 1000;
+          //deltaTime3x3 = endTime3x3 - startTime3x3;  
+          //Log.e("TIME", "TIME FOR 3x3 KERNEL:" +  Long.toString(deltaTime3x3));  
         }
         
        if(cont==2) 	
@@ -110,14 +118,10 @@ class  GlRenderer extends Activity implements GLSurfaceView.Renderer {
        {
        	 GLES20.glUseProgram(mProgram_7x7);
        }
-       
-       if(cont==4) 	
-       {
-       	 GLES20.glUseProgram(mProgram_9x9);
-       }
-   
-      GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-      GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureID);
+        
+        
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureID);
 
         mTriangleVertices.position(0);
         GLES20.glVertexAttribPointer(maPositionHandle, 3, GLES20.GL_FLOAT, false,
@@ -172,7 +176,6 @@ class  GlRenderer extends Activity implements GLSurfaceView.Renderer {
         mProgram_3x3= createProgram(mVertexShader, mFragmentShader_3x3);
         mProgram_5x5= createProgram(mVertexShader, mFragmentShader_5x5);
         mProgram_7x7= createProgram(mVertexShader, mFragmentShader_7x7);
-        mProgram_9x9=createProgram(mVertexShader, mFragmentShader_9x9);
 
         
         if (mProgram_image == 0||mProgram_3x3==0||mProgram_5x5==0||mProgram_7x7==0) {
@@ -211,4 +214,265 @@ class  GlRenderer extends Activity implements GLSurfaceView.Renderer {
     }
 
     private int loadShader(int shaderType, String source) {
-        int shader = GLES20.gl
+        int shader = GLES20.glCreateShader(shaderType);
+        if (shader != 0) {
+            GLES20.glShaderSource(shader, source);
+            GLES20.glCompileShader(shader);
+            int[] compiled = new int[1];
+            GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compiled, 0);
+            if (compiled[0] == 0) {
+                Log.e(TAG, "Could not compile shader " + shaderType + ":");
+                Log.e(TAG, GLES20.glGetShaderInfoLog(shader));
+                GLES20.glDeleteShader(shader);
+                shader = 0;
+            }
+        }
+        return shader;
+    }
+
+    private int createProgram(String vertexSource, String fragmentSource) {
+        int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource);
+        if (vertexShader == 0) {
+            return 0;
+        }
+
+        int pixelShader = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentSource);
+        if (pixelShader == 0) {
+            return 0;
+        }
+
+        int program = GLES20.glCreateProgram();
+        if (program != 0) {
+            GLES20.glAttachShader(program, vertexShader);
+            checkGlError("glAttachShader");
+            GLES20.glAttachShader(program, pixelShader);
+            checkGlError("glAttachShader");
+            GLES20.glLinkProgram(program);
+            int[] linkStatus = new int[1];
+            GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0);
+            if (linkStatus[0] != GLES20.GL_TRUE) {
+                Log.e(TAG, "Could not link program: ");
+                Log.e(TAG, GLES20.glGetProgramInfoLog(program));
+                GLES20.glDeleteProgram(program);
+                program = 0;
+            }
+        }
+        return program;
+    }
+
+    private void checkGlError(String op) {
+        int error;
+        while ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
+            Log.e(TAG, op + ": glError " + error);
+            throw new RuntimeException(op + ": glError " + error);
+        }
+    }
+    
+    private final float[] mVerticesData = {
+			-1.0f, -1.0f,  0.0f,		// V1 - bottom left
+			-1.0f,  1.0f,  0.0f,		// V2 - top left
+			 1.0f, -1.0f,  0.0f,		// V3 - bottom right
+			 1.0f,  1.0f,  0.0f			// V4 - top right
+	};
+    
+    private float TextureCoordinateData[] = {    		
+    		// Mapping coordinates for the vertices
+    		0.0f, 1.0f,		// top left		(V2)
+    		0.0f, 0.0f,		// bottom left	(V1)
+    		1.0f, 1.0f,		// top right	(V4)
+    		1.0f, 0.0f		// bottom right	(V3)
+    };
+
+    private FloatBuffer mTriangleVertices;
+    private final FloatBuffer mTextureCoordinates;
+
+    private final String mVertexShader =
+        "uniform mat4 uMVPMatrix;\n" +
+        "attribute vec4 aPosition;\n" +
+        "attribute vec2 aTextureCoord;\n" +
+        "varying vec2 vTextureCoord;\n" +
+        "void main() {\n" +
+        "gl_Position = uMVPMatrix * aPosition;\n" +
+        "vTextureCoord = aTextureCoord;\n" +
+        "}\n";
+    
+    private final String mFragmentShader_3x3 =
+        "precision mediump float;\n" +
+        "varying vec2 vTextureCoord;\n" +
+        "float KernelMatrix[9];\n" +
+        "float hight[1];\n" +
+        "float wight[1];\n" +
+        "float step_w = 0.01;\n" +
+        "float step_h = 0.01;\n" +  
+        "int KernelSize = KernelMatrix.length();\n" +
+        "uniform sampler2D sTexture;\n" +
+        "int i=0;\n" +        
+        "void main() {\n" +
+        "gl_FragColor = vec4(0.0);\n" +
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-step_w, -step_h))* 0.0;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0, -step_h))* 1.0;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(step_w, -step_h))* 0.0 ;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-step_w, 0.0))*1.0;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0, 0.0))*-4.0;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(step_w, 0.0))* 1.0;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-step_w,step_h))*0.0;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0, step_h))*1.0;\n"+
+        "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(step_w, step_h))* 0.0;\n"+ 
+        "}\n";
+    
+    private final String mFragmentShader_image =
+            "precision mediump float;\n" +
+            "varying vec2 vTextureCoord;\n" +
+            "uniform sampler2D sTexture;\n" +    
+            "void main() {\n" +
+            "gl_FragColor = texture2D(sTexture,vTextureCoord);\n"+
+            "}\n";
+
+    private final String mFragmentShader_5x5 =
+            "precision mediump float;\n" +
+            "varying vec2 vTextureCoord;\n" +
+            "float KernelMatrix[9];\n" +
+            "float hight[1];\n" +
+            "float wight[1];\n" +  
+            "int KernelSize = KernelMatrix.length();\n" +
+            "uniform sampler2D sTexture;\n" +
+                    
+            "void main() {\n" +
+             "gl_FragColor = vec4(0.0);\n" +
+            
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/ 1024.0,-2.0/768.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,-2.0/768.0)) *-4.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,-2.0/768.0))*-6.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,-2.0/768.0))*-4.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,-2.0/768.0)) *-1.0;\n"+
+            
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,-1.0/768.0))*-2.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,-1.0/768.0))*-8.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,-1.0/768.0))*-12.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,-1.0/768.0))*-8.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,-1.0/768.0))*-2.0;\n"+
+             
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,0.0))* 0.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,0.0))*0.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,0.0))* 0.0 ;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,0.0))* 0.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,0.0))* 0.0;\n"+
+             
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,1.0/768.0))*2.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,1.0/768.0))*8.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,1.0/768.0))*12.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0f/1024.0,1.0/768.0))*8.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,1.0/ 768.0))*2.0;\n"+
+             
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,2.0/768.0)) *1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,2.0/768.0)) * 4.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,2.0/768.0)) * 6.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,2.0/768.0)) *4.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,2.0/ 768.0)) *1.0;\n"+
+             "}\n";
+    
+
+    private final String mFragmentShader_7x7 =
+            "precision mediump float;\n" +
+            "varying vec2 vTextureCoord;\n" +
+            "float KernelMatrix[9];\n" +
+            "float step_w = 0.01;\n" +
+            "float step_h = 0.01;\n" +   
+            "float delta  = 0.0;\n" +   
+            "int KernelSize = KernelMatrix.length();\n" +
+            "uniform sampler2D sTexture;\n" +
+                    
+            "void main() {\n" +
+             "gl_FragColor = vec4(0.0);\n" +
+            
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-3.0/1024.0,-3.0/768.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,-3.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,-3.0/768.0))*-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,-3.0/768.0f))*-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0f,-3.0/768.0f)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,-3.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(3.0/1024.0,-3.0/768.0)) *-1.0;\n"+
+             
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-3.0f/1024.0,-2.0/768.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,-2.0/768.0)) *-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,-2.0/768.0))*-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,-2.0/768.0))*-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,-2.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,-2.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(3.0/1024.0,-2.0/768.0)) *-1.0;\n"+
+             
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-3.0/1024.0,-1.0f/768.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,-1.0/768.0)) *-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,-3.0/768.0))*-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,-1.0/768.0))*-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,-1.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,-1.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(3.0/1024.0,-1.0/768.0)) *-1.0;\n"+
+             
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-3.0/1024.0,0.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,0.0)) *-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,0.0))*-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,0.0))*48.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,0.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,-3.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(3.0/1024.0,-3.0/768.0)) *-1.0;\n"+
+            
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-3.0/1024.0,1.0f/768.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,1.0/768.0)) *-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,1.0/768.0))*-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,1.0/768.0))*-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,1.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,1.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(3.0/1024.0,1.0/768.0)) *-1.0;\n"+
+           
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-3.0/1024.0,2.0/768.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,2.0/768.0)) *-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,2.0/768.0))*-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,2.0/768.0))*-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,2.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,2.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(3.0/1024.0,2.0/768.0)) *-1.0;\n"+
+             
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-3.0/1024.0,3.0/768.0)) * -1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-2.0/1024.0,3.0/768.0)) *-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(-1.0/1024.0,3.0/768.0))*-1.0;\n"+ 
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(0.0,3.0/768.0))*-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(1.0/1024.0,3.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(2.0/1024.0,3.0/768.0)) *-1.0;\n"+
+             "gl_FragColor +=  texture2D(sTexture,vTextureCoord+vec2(3.0/1024.0,3.0f/768.0)) *-1.0;\n"+             
+             "}\n";
+    
+    
+    
+    private float [] mMVPMatrix = new float[16];
+    private float [] mProjMatrix = new float[16];
+    private float [] mMMatrix = new float[16];
+    private float [] mVMatrix = new float[16];
+    public boolean mStart=false;
+    public boolean mRight=false;
+    public boolean mLeft=false;
+ 	float hight= 0f;
+	float wight = 0f;
+
+	
+    private int mProgram_image;
+    private int cont=0;
+    private int mProgram_3x3;
+    private int mProgram_5x5;
+    private int mProgram_7x7;
+    private int mTextureID;
+    private long deltaTime0x0,startTime0x0,endTime0x0;
+    private long deltaTime3x3,startTime3x3,endTime3x3;
+    private int muMVPMatrixHandle;
+    private int muKernelMatrixHandle;
+    private int HightHandle;
+    private int WightHandle;
+    private int maPositionHandle;
+    private int maTextureHandle;
+    public Bitmap  image=null; 
+    private Bitmap bitmap=null;
+    private Context mContext;
+    TextView textView;
+    Bitmap bitmaptext;
+    private static String TAG = "GLES20TriangleRenderer";
+}
